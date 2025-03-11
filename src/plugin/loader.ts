@@ -25,11 +25,11 @@ export class PluginLoader {
 
   async loadPlugin(name: string): Promise<void> {
     try {
-      const { default: pluginModule } = await import(
+      const { default: PluginModule } = await import(
         `../../plugins/${name}/index.ts`
       );
 
-      const instance: RegistrablePlugin = new pluginModule();
+      const instance: RegistrablePlugin = new PluginModule();
       await instance.register();
 
       this.plugins.push(instance);

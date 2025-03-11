@@ -71,7 +71,8 @@ export class BasicAIProvider extends IntelligenceProvider {
         You can use tools to trigger actions like turning on lights or setting reminders.
         When you need to trigger an action for a device, retrieve the device and action id before triggering any action, you can do so by using the device-list or device-get tool.
         You always have to give a response to the user's prompt, it can also just be an acknowledgment if an action was triggered.
-        `,
+
+        You can use the following tools: ${assistant.toolsHandler.tools.map((tool) => tool.name).join(", ")}`,
       messages,
       tools,
       maxSteps: 9,
