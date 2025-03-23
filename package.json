@@ -17,7 +17,7 @@
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",
     "@prisma/client": "6.5.0",
-    "ai": "^4.1.54",
+    "ai": "^4.1.61",
     "hono": "^4.7.4",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
