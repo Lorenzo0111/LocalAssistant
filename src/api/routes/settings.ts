@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { assistant } from "../../assistant";
 import { z } from "zod";
+import { assistant } from "../../assistant";
 
 export const settingsRoute = new Hono()
   .get("/", async (ctx) => {
@@ -14,7 +14,7 @@ export const settingsRoute = new Hono()
     zValidator(
       "json",
       z.object({
-        value: z.string(),
+        value: z.unknown(),
       }),
     ),
     async (ctx) => {

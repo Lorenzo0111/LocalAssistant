@@ -1,3 +1,4 @@
+import type { ZodTypeAny } from "zod";
 import { assistant } from "../assistant";
 import { createLogger } from "../services/logger";
 
@@ -8,4 +9,8 @@ export abstract class RegistrablePlugin {
 
   abstract register(): Promise<void>;
   abstract unregister(): Promise<void>;
+
+  getSettings(): Record<string, ZodTypeAny> {
+    return {};
+  }
 }

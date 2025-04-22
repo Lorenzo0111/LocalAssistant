@@ -4,5 +4,8 @@
   "type": "module",
   "dependencies": {
     "ollama-ai-provider": "^1.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
   }
 }

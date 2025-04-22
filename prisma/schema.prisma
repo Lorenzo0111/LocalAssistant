@@ -8,8 +8,9 @@ datasource db {
 }
 
 model Setting {
-  key   String @id
-  value String
+  key        String  @id
+  value      String?
+  jsonSchema String?
 }
 
 model Message {

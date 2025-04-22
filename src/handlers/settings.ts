@@ -1,20 +1,37 @@
-import type { Setting } from "@prisma/client";
+import type { ZodTypeAny } from "zod";
+import { type JsonSchema7Type, zodToJsonSchema } from "zod-to-json-schema";
 import { createLogger } from "../services/logger";
 import { prisma } from "../services/prisma";
+import { enabledPluginsSchema } from "../types/settings";
+
+interface LoadedSetting<T> {
+  key: string;
+  value: T;
+}
 
 export class SettingHandler {
   private readonly logger = createLogger("settings");
-  private readonly settings: Setting[] = [];
+  private readonly settings: LoadedSetting<unknown>[] = [];
+  private readonly schemaRegistry: Record<string, JsonSchema7Type> = {};
 
   async init() {
+    this.registerPluginSettings({
+      ENABLED_PLUGINS: enabledPluginsSchema,
+    });
+
     const dbSettings = await prisma.setting.findMany();
-    this.settings.push(...dbSettings);
+    this.settings.push(
+      ...dbSettings.map((setting) => ({
+        key: setting.key,
+        value: setting.value && JSON.parse(setting.value),
+      })),
+    );
 
     this.logger.info(`Loaded ${this.settings.length} settings`);
   }
 
-  getSettings(keys: string[]): (Setting | undefined)[] {
-    const settings: (Setting | undefined)[] = [];
+  getSettings(keys: string[]): (LoadedSetting<unknown> | undefined)[] {
+    const settings: (LoadedSetting<unknown> | undefined)[] = [];
 
     for (const key of keys) {
       const setting = this.getSetting(key);
@@ -28,23 +45,66 @@ export class SettingHandler {
     return settings;
   }
 
-  getSetting(key: string): Setting | undefined {
-    return this.settings.find((setting) => setting.key === key);
+  getSetting<T>(key: string): LoadedSetting<T> | undefined {
+    return this.settings.find((setting) => setting.key === key) as
+      | LoadedSetting<T>
+      | undefined;
   }
 
-  allSettings(): Setting[] {
+  allSettings(): LoadedSetting<unknown>[] {
     return [...this.settings];
   }
 
-  async setSetting(key: string, value: string) {
+  async setSetting(key: string, value: unknown, jsonSchema?: string) {
     await prisma.setting.upsert({
       where: { key },
-      update: { value },
-      create: { key, value },
+      update: {
+        value: JSON.stringify(value),
+        jsonSchema:
+          jsonSchema ??
+          (this.schemaRegistry[key] &&
+            JSON.stringify(this.schemaRegistry[key])),
+      },
+      create: {
+        key,
+        value: JSON.stringify(value),
+        jsonSchema:
+          jsonSchema ??
+          (this.schemaRegistry[key] &&
+            JSON.stringify(this.schemaRegistry[key])),
+      },
     });
 
-    const setting = this.getSetting(key);
+    const setting: LoadedSetting<typeof value> | undefined =
+      this.getSetting(key);
+
     if (setting) setting.value = value;
     else this.settings.push({ key, value });
+  }
+
+  async registerPluginSettings(settings: Record<string, ZodTypeAny>) {
+    for (const [key, schema] of Object.entries(settings)) {
+      if (this.schemaRegistry[key])
+        this.logger.warn(`Overwriting existing schema for setting ${key}`);
+
+      this.schemaRegistry[key] = zodToJsonSchema(schema, key);
+
+      await prisma.setting.upsert({
+        where: {
+          key,
+        },
+        create: {
+          key,
+          jsonSchema: JSON.stringify(this.schemaRegistry[key]),
+        },
+        update: {
+          jsonSchema: JSON.stringify(this.schemaRegistry[key]),
+        },
+      });
+    }
+
+    this.logger.info(
+      `Registered ${Object.keys(settings).length} plugin settings`,
+    );
   }
 }

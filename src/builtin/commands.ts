@@ -1,6 +1,5 @@
 import { assistant } from "../assistant";
 import type { Command } from "../cli/command";
-import { createLogger } from "../services/logger";
 
 const echoCommand: Command = {
   name: "echo",
@@ -24,7 +23,10 @@ const settingCommand: Command = {
       case "get":
         if (!key) return "Key is required";
 
-        return assistant.settingsManager.getSetting(key)?.value ?? "Not set";
+        return (
+          JSON.stringify(assistant.settingsManager.getSetting(key)?.value) ??
+          "Not set"
+        );
       case "set":
         if (!key) return "Key is required";
 
@@ -33,7 +35,7 @@ const settingCommand: Command = {
       case "list":
         return `\n${assistant.settingsManager
           .allSettings()
-          .map((s) => `${s.key}: ${s.value}`)
+          .map((s) => `${s.key}: ${JSON.stringify(s.value)}`)
           .join("\n")}`;
       default:
         return `Unknown action: ${action}`;
@@ -50,9 +52,8 @@ const enableCommand: Command = {
     const [plugin] = args;
 
     const enabledPlugins =
-      assistant.settingsManager
-        .getSetting("ENABLED_PLUGINS")
-        ?.value.split(",") ?? [];
+      assistant.settingsManager.getSetting<string[]>("ENABLED_PLUGINS")
+        ?.value ?? [];
 
     if (enabledPlugins[0] === "") enabledPlugins.shift();
     if (enabledPlugins.includes(plugin)) return "Plugin is already enabled";
@@ -60,7 +61,7 @@ const enableCommand: Command = {
     enabledPlugins.push(plugin);
     await assistant.settingsManager.setSetting(
       "ENABLED_PLUGINS",
-      enabledPlugins.join(","),
+      enabledPlugins,
     );
 
     await assistant.pluginLoader.loadPlugin(plugin);

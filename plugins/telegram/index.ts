@@ -1,5 +1,6 @@
 import { type Context, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
+import { z } from "zod";
 import { RegistrablePlugin } from "../../src/plugin";
 
 export default class TelegramPlugin extends RegistrablePlugin {
@@ -7,7 +8,8 @@ export default class TelegramPlugin extends RegistrablePlugin {
   private bot?: Telegraf;
 
   async register(): Promise<void> {
-    const token = this.assistant.settingsManager.getSetting("TELEGRAM_TOKEN");
+    const token =
+      this.assistant.settingsManager.getSetting<string>("TELEGRAM_TOKEN");
     if (!token) throw new Error("TELEGRAM_TOKEN is not set");
 
     this.bot = new Telegraf(token.value);
@@ -15,10 +17,10 @@ export default class TelegramPlugin extends RegistrablePlugin {
       const user = ctx.from;
       if (!user || user.is_bot) return await next();
 
-      const authorizedString = this.assistant.settingsManager.getSetting(
-        "TELEGRAM_AUTHORIZED_USERS",
-      );
-      const authorized = authorizedString?.value.split(",") || [];
+      const authorizedString = this.assistant.settingsManager.getSetting<
+        string[]
+      >("TELEGRAM_AUTHORIZED_USERS");
+      const authorized = authorizedString?.value || [];
       if (!authorized.includes(user.id.toString()))
         return await ctx.reply(
           `Oh no! You are not authorized. If you want to use the bot run the \`telegram authorize ${user.id}\` command in the CLI.`,
@@ -42,17 +44,17 @@ export default class TelegramPlugin extends RegistrablePlugin {
         const [command, id] = args;
 
         if (command === "authorize") {
-          const authorizedString = this.assistant.settingsManager.getSetting(
-            "TELEGRAM_AUTHORIZED_USERS",
-          );
-          const authorized = authorizedString?.value.split(",") || [];
+          const authorizedString = this.assistant.settingsManager.getSetting<
+            string[]
+          >("TELEGRAM_AUTHORIZED_USERS");
+          const authorized = authorizedString?.value || [];
           if (authorized[0] === "") authorized.shift();
           if (authorized.includes(id)) return "User is already authorized";
 
           authorized.push(id);
           await this.assistant.settingsManager.setSetting(
             "TELEGRAM_AUTHORIZED_USERS",
-            authorized.join(","),
+            authorized,
           );
 
           return "User authorized successfully";
@@ -78,5 +80,15 @@ export default class TelegramPlugin extends RegistrablePlugin {
 
   async unregister(): Promise<void> {
     this.bot?.stop();
+  }
+
+  override getSettings(): Record<string, z.ZodTypeAny> {
+    return {
+      TELEGRAM_TOKEN: z.string().describe("Telegram bot token"),
+      TELEGRAM_AUTHORIZED_USERS: z
+        .array(z.string())
+        .default([""])
+        .describe("List of authorized users"),
+    };
   }
 }

@@ -8,9 +8,8 @@ export class PluginLoader {
 
   async loadPlugins(): Promise<void> {
     const loadedPlugins =
-      assistant.settingsManager
-        .getSetting("ENABLED_PLUGINS")
-        ?.value.split(",") ?? [];
+      assistant.settingsManager.getSetting<string[]>("ENABLED_PLUGINS")
+        ?.value ?? [];
 
     if (loadedPlugins[0] === "") loadedPlugins.shift();
 
@@ -31,6 +30,10 @@ export class PluginLoader {
 
       const instance: RegistrablePlugin = new PluginModule();
       await instance.register();
+
+      await assistant.settingsManager.registerPluginSettings(
+        instance.getSettings(),
+      );
 
       this.plugins.push(instance);
     } catch (e) {

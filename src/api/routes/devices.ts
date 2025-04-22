@@ -1,7 +1,7 @@
-import { Hono } from "hono";
-import { assistant } from "../../assistant";
 import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 import { z } from "zod";
+import { assistant } from "../../assistant";
 
 export const devicesRoute = new Hono()
   .get("/", async (ctx) => {
